@@ -19,7 +19,7 @@
     <nav aria-label="Main navigation">
       <a href="#today">Today</a><a href="#library">Bible library</a><a href="#prayer">Prayer</a>
     </nav>
-    <div class="header-actions"><button class="install-button" id="installApp" hidden>Install app</button><button class="notify-button" id="enableNotifications">Enable 8am reminder</button></div>
+    <div class="header-actions"><button class="install-button" id="installApp" hidden>Install app</button><button class="notify-button" id="enableNotifications">Enable reminders</button></div>
     <button class="menu-toggle" id="menuToggle" aria-label="Open navigation">☰</button>
   </header>
 
@@ -70,6 +70,16 @@
           <div class="card-foot">PAUSE · BREATHE · PRAY</div>
         </article>
       </div>
+      <section class="reminder-panel" id="reminderSettings" aria-labelledby="reminderHeading">
+        <div class="reminder-copy"><p class="eyebrow left">MAKE IT YOURS</p><h3 id="reminderHeading">Your daily reminder.</h3><p>Choose when you would like a little scripture and encouragement to arrive. Times use your device's local timezone.</p></div>
+        <div class="reminder-controls">
+          <label class="reminder-time-label" for="reminderTime">Notification time</label>
+          <input id="reminderTime" type="time" value="08:00" step="900">
+          <label class="reminder-toggle"><input id="reminderEnabled" type="checkbox" checked><span>Daily reminder enabled</span></label>
+          <button class="button button-light" id="saveReminder">Save reminder settings</button>
+          <p class="reminder-status" id="reminderStatus" role="status">Choose a time in 15-minute increments.</p>
+        </div>
+      </section>
     </section>
 
     <section class="library-section" id="library">
