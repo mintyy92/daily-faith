@@ -1,21 +1,25 @@
+
 name: Daily Faith push scheduler
 
 on:
   schedule:
-    - cron: "7 * * * *"
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 jobs:
   notify:
     runs-on: ubuntu-latest
+
     steps:
       - name: Check Melbourne reminder time
         env:
           DAILY_FAITH_URL: ${{ secrets.DAILY_FAITH_URL }}
           DAILY_FAITH_CRON_SECRET: ${{ secrets.DAILY_FAITH_CRON_SECRET }}
+
         run: |
           test -n "$DAILY_FAITH_URL"
           test -n "$DAILY_FAITH_CRON_SECRET"
+
           curl --fail --silent --show-error \
             -H "Authorization: Bearer $DAILY_FAITH_CRON_SECRET" \
             "$DAILY_FAITH_URL/api/send-daily"
