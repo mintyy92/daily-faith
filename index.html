@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#173b32">
+  <meta name="description" content="Daily Faith — a moment of scripture, prayer and reflection for every day.">
+  <title>Daily Faith — A moment with God</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#" aria-label="Daily Faith home"><span class="brand-mark">✝</span><span>DAILY FAITH</span></a>
+    <nav aria-label="Main navigation">
+      <a href="#today">Today</a><a href="#library">Bible library</a><a href="#prayer">Prayer</a>
+    </nav>
+    <a class="header-cta" href="#today">Today's word <span>↗</span></a>
+    <button class="menu-toggle" id="menuToggle" aria-label="Open navigation">☰</button>
+  </header>
+
+  <main>
+    <section class="hero" id="today">
+      <div class="hero-glow"></div>
+      <div class="hero-inner">
+        <p class="eyebrow"><span class="eyebrow-line"></span> A MOMENT WITH GOD <span class="eyebrow-line"></span></p>
+        <p class="date-label" id="todayDate"></p>
+        <h1>Be still. Find strength.<br><em>Walk in faith.</em></h1>
+        <p class="hero-subtitle">A little scripture can bring a lot of light to your day.</p>
+        <a class="scroll-link" href="#daily-word">↓ &nbsp; TODAY'S WORD</a>
+      </div>
+      <div class="hero-bottom-note">GRACE FOR TODAY · HOPE FOR TOMORROW</div>
+    </section>
+
+    <section class="daily-section section-wrap" id="daily-word">
+      <div class="section-heading">
+        <div><p class="eyebrow left">YOUR DAILY MOMENT</p><h2>A word for today.</h2></div>
+        <span class="edition-pill">WORLD ENGLISH BIBLE</span>
+      </div>
+      <article class="verse-card">
+        <div class="card-topline"><span>✦ &nbsp; VERSE OF THE DAY</span><span id="dayCount"></span></div>
+        <div class="verse-content">
+          <span class="quote-mark">“</span>
+          <blockquote id="verseText"></blockquote>
+          <p class="verse-reference" id="verseReference"></p>
+          <p class="verse-context" id="verseContext"></p>
+        </div>
+        <div class="verse-actions">
+          <button class="button button-light" id="shareVerse">↗ &nbsp; Share verse</button>
+          <button class="text-button" id="copyVerse">Copy text</button>
+        </div>
+      </article>
+
+      <div class="reflection-grid">
+        <article class="info-card reflection-card">
+          <div class="icon-circle">✧</div><p class="eyebrow left">TODAY'S REFLECTION</p>
+          <h3 id="reflectionTitle">A steady heart</h3>
+          <p id="reflectionText"></p>
+          <div class="card-foot">TAKE THIS INTO YOUR DAY</div>
+        </article>
+        <article class="info-card prayer-card" id="prayer">
+          <div class="prayer-top"><div class="icon-circle gold">♡</div><p class="eyebrow left">TODAY'S PRAYER</p></div>
+          <h3>A moment of prayer</h3>
+          <p id="prayerText"></p>
+          <button class="text-button prayer-copy" id="copyPrayer">Copy prayer &nbsp; ↗</button>
+          <div class="card-foot">PAUSE · BREATHE · PRAY</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="library-section" id="library">
+      <div class="section-wrap">
+        <div class="section-heading library-heading">
+          <div><p class="eyebrow left">SCRIPTURE FOR EVERY SEASON</p><h2>Explore the Bible.</h2><p class="section-description">Find encouragement for whatever life brings.</p></div>
+          <span class="library-symbol">✝</span>
+        </div>
+        <div class="filter-row" id="filters">
+          <button class="filter active" data-filter="All">All verses</button>
+          <button class="filter" data-filter="Faith">Faith</button>
+          <button class="filter" data-filter="Hope">Hope</button>
+          <button class="filter" data-filter="Strength">Strength</button>
+          <button class="filter" data-filter="Love">Love</button>
+          <button class="filter" data-filter="Peace">Peace</button>
+        </div>
+        <div class="library-grid" id="libraryGrid"></div>
+        <p class="library-note">A growing selection of scripture references. The daily verse changes automatically each calendar day.</p>
+      </div>
+    </section>
+
+    <section class="closing-quote">
+      <p class="eyebrow">CARRY THIS WITH YOU</p>
+      <h2>“Let all that you do be done in love.”</h2>
+      <p>1 Corinthians 16:14 · WEB</p>
+    </section>
+  </main>
+
+  <footer><a class="brand footer-brand" href="#"><span class="brand-mark">✝</span><span>DAILY FAITH</span></a><p>Rooted in scripture. Growing in grace.</p><span class="copyright">© <span id="year"></span> DAILY FAITH</span></footer>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
