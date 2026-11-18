@@ -25,7 +25,9 @@ const library = [
   {ref:"Colossians 3:15",text:"And let the peace of God rule in your hearts.",tag:"Peace"}
 ];
 
-const dayNumber = Math.floor(Date.now() / 86400000);
+const melbourneDateParts = new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Melbourne", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+const melbourneDate = Object.fromEntries(melbourneDateParts.map(part => [part.type, part.value]));
+const dayNumber = Math.floor(Date.UTC(Number(melbourneDate.year), Number(melbourneDate.month) - 1, Number(melbourneDate.day)) / 86400000);
 const today = dailyContent[((dayNumber % dailyContent.length) + dailyContent.length) % dailyContent.length];
 const date = new Date();
 document.getElementById("todayDate").textContent = date.toLocaleDateString(undefined,{weekday:"long",year:"numeric",month:"long",day:"numeric"});
