@@ -14,7 +14,7 @@ module.exports=async(req,res)=>{
    if(!groups.has(key))groups.set(key,[]);groups.get(key).push({doc,token:d.token,localDate,verse});due++;
   }
   let sent=0,failed=0;
-  for(const items of groups.values())for(let i=0;i<items.length;i+=500){const batch=items.slice(i,i+500),verse=batch[0].verse,result=await a.messaging().sendEachForMulticast({tokens:batch.map(x=>x.token),notification:{title:"Your verse for today · "+verse[0],body:verse[1]},data:{url:"/"},webpush:{fcmOptions:{link:"/"}}});
+  for(const items of groups.values())for(let i=0;i<items.length;i+=500){const batch=items.slice(i,i+500),verse=batch[0].verse,result=await a.messaging().sendEachForMulticast({tokens:batch.map(x=>x.token),notification:{title:verse[0],body:verse[1]},data:{url:"/"},webpush:{fcmOptions:{link:"/"}}});
    const writes=[];batch.forEach((item,j)=>{const response=result.responses[j],code=response.error?.code;if(response.success){sent++;writes.push(item.doc.ref.update({lastSentDate:item.localDate,lastSentAt:a.firestore.FieldValue.serverTimestamp()}));}else{failed++;if(code==="messaging/registration-token-not-registered"||code==="messaging/invalid-registration-token")writes.push(item.doc.ref.update({active:false}));}});await Promise.all(writes);
   }
   return res.status(200).json({ok:true,checked:snap.size,due,sent,failed,invalid,checkedAt:now.toISOString()});
