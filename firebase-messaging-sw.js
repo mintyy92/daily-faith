@@ -2,7 +2,7 @@ importScripts("https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js
 importScripts("https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js");
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAvp_n3uPNg4gkG9BQU39OEXuARUCQBPg4",
+  apiKey: "AIzaSyAvp_n3uPNg4gK9BQU39OEXuARUCQBPg4",
   authDomain: "daily-faith-27eb2.firebaseapp.com",
   projectId: "daily-faith-27eb2",
   storageBucket: "daily-faith-27eb2.firebasestorage.app",
@@ -14,11 +14,15 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-// Data-only messages are displayed here, once, in the background.
+// The server sends data-only messages. This handler is the single place
+// where a background notification is created.
 messaging.onBackgroundMessage(payload => {
   const data = payload.data || {};
-  self.registration.showNotification(data.title || "Daily Faith", {
-    body: data.body || "Your Bible verse is ready.",
+  const title = data.title || "Daily Faith";
+  const body = data.body || "Your Bible verse is ready.";
+
+  return self.registration.showNotification(title, {
+    body,
     icon: "/icons/icon-192.png",
     badge: "/icons/icon-192.png",
     data: { url: data.url || "/" }
@@ -28,6 +32,7 @@ messaging.onBackgroundMessage(payload => {
 self.addEventListener("notificationclick", event => {
   event.notification.close();
   const url = event.notification.data?.url || "/";
+
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
       for (const client of list) {
