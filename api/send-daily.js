@@ -1,9 +1,11 @@
+
 const admin = require("firebase-admin");
 
 function fb() {
   if (!admin.apps.length) {
     const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
     if (!raw) throw Error("Missing FIREBASE_SERVICE_ACCOUNT_JSON");
+
     admin.initializeApp({
       credential: admin.credential.cert(JSON.parse(raw))
     });
@@ -21,7 +23,10 @@ function localParts(date, timezone) {
     minute: "2-digit",
     hourCycle: "h23"
   }).formatToParts(date);
-  return Object.fromEntries(parts.map(part => [part.type, part.value]));
+
+  return Object.fromEntries(
+    parts.map(part => [part.type, part.value])
+  );
 }
 
 const verses = [
@@ -36,6 +41,7 @@ const verses = [
 
 module.exports = async (req, res) => {
   const secret = process.env.CRON_SECRET;
+
   if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
     return res.status(401).end("Unauthorized");
   }
@@ -44,12 +50,15 @@ module.exports = async (req, res) => {
     const a = fb();
     const db = a.firestore();
     const now = new Date();
+
     const snap = await db.collection("pushTokens")
       .where("active", "==", true)
       .get();
 
+    // Keep the Android app subscription filter.
     const appDocs = snap.docs.filter(doc => {
       const data = doc.data();
+
       return data.platform === "android-app" &&
         data.packageName === "com.dailyfaith.app";
     });
@@ -62,28 +71,55 @@ module.exports = async (req, res) => {
       const data = doc.data();
       const timezone = data.timezone || "Australia/Melbourne";
       const reminderTime = data.reminderTime || "08:00";
+
       let parts;
 
       try {
         parts = localParts(now, timezone);
       } catch {
-        await doc.ref.update({ active: false, invalidTimezone: true });
+        await doc.ref.update({
+          active: false,
+          invalidTimezone: true
+        });
         invalid++;
         continue;
       }
 
-      const localDate = `${parts.year}-${parts.month}-${parts.day}`;
-      const localTime = `${parts.hour}:${parts.minute}`;
-      if (localTime < reminderTime || data.lastSentDate === localDate) continue;
+      const localDate =
+        `${parts.year}-${parts.month}-${parts.day}`;
 
-      const day = Math.floor(Date.UTC(
-        Number(parts.year), Number(parts.month) - 1, Number(parts.day)
-      ) / 86400000);
+      const localTime =
+        `${parts.hour}:${parts.minute}`;
+
+      if (
+        localTime < reminderTime ||
+        data.lastSentDate === localDate
+      ) {
+        continue;
+      }
+
+      const day = Math.floor(
+        Date.UTC(
+          Number(parts.year),
+          Number(parts.month) - 1,
+          Number(parts.day)
+        ) / 86400000
+      );
+
       const verse = verses[((day % 7) + 7) % 7];
       const key = `${verse[0]}|${verse[1]}`;
 
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push({ doc, token: data.token, localDate, verse });
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+
+      groups.get(key).push({
+        doc,
+        token: data.token,
+        localDate,
+        verse
+      });
+
       due++;
     }
 
@@ -95,42 +131,62 @@ module.exports = async (req, res) => {
         const batch = items.slice(i, i + 500);
         const verse = batch[0].verse;
 
-        // Data-only message: the service worker displays it exactly once.
-        const result = await a.messaging().sendEachForMulticast({
-          tokens: batch.map(item => item.token),
-          data: {
-            title: verse[0],
-            body: verse[1],
-            url: "/"
-          },
-          webpush: {
-            headers: { TTL: "86400" }
-          }
-        });
-
-        const writes = [];
-        batch.forEach((item, index) => {
-          const response = result.responses[index];
-          const code = response.error?.code;
-
-          if (response.success) {
-            sent++;
-            writes.push(item.doc.ref.update({
-              lastSentDate: item.localDate,
-              lastSentAt: a.firestore.FieldValue.serverTimestamp()
-            }));
-          } else {
-            failed++;
-            if (
-              code === "messaging/registration-token-not-registered" ||
-              code === "messaging/invalid-registration-token"
-            ) {
-              writes.push(item.doc.ref.update({ active: false }));
-            }
-          }
-        });
-        await Promise.all(writes);
+        // Restore the original Firebase notification payload.
+        await sendBatch(batch, verse);
       }
+    }
+
+    async function sendBatch(batch, verse) {
+      const result = await a.messaging().sendEachForMulticast({
+        tokens: batch.map(item => item.token),
+
+        notification: {
+          title: verse[0],
+          body: verse[1]
+        },
+
+        data: {
+          url: "/"
+        },
+
+        webpush: {
+          fcmOptions: {
+            link: "/"
+          }
+        }
+      });
+
+      const writes = [];
+
+      batch.forEach((item, index) => {
+        const response = result.responses[index];
+        const code = response.error?.code;
+
+        if (response.success) {
+          sent++;
+
+          writes.push(
+            item.doc.ref.update({
+              lastSentDate: item.localDate,
+              lastSentAt:
+                a.firestore.FieldValue.serverTimestamp()
+            })
+          );
+        } else {
+          failed++;
+
+          if (
+            code === "messaging/registration-token-not-registered" ||
+            code === "messaging/invalid-registration-token"
+          ) {
+            writes.push(
+              item.doc.ref.update({ active: false })
+            );
+          }
+        }
+      });
+
+      await Promise.all(writes);
     }
 
     return res.status(200).json({
@@ -144,8 +200,11 @@ module.exports = async (req, res) => {
       invalid,
       checkedAt: now.toISOString()
     });
+
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Send failed" });
+    return res.status(500).json({
+      error: "Send failed"
+    });
   }
 };
