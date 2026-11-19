@@ -1,129 +1,176 @@
 
 const admin = require("firebase-admin");
 
-function fb() {
+function getFirebase() {
   if (!admin.apps.length) {
     const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-    if (!raw) throw Error("Missing FIREBASE_SERVICE_ACCOUNT_JSON");
+
+    if (!raw) {
+      throw new Error("Missing FIREBASE_SERVICE_ACCOUNT_JSON");
+    }
+
     admin.initializeApp({
       credential: admin.credential.cert(JSON.parse(raw))
     });
   }
+
   return admin;
 }
 
-const validTimeZone = value => {
-  try {
-    new Intl.DateTimeFormat("en-AU", { timeZone: value }).format();
-    return true;
-  } catch {
-    return false;
-  }
-};
-
 module.exports = async (req, res) => {
-  if (req.method !== "POST") return res.status(405).end();
+  if (req.method !== "POST") {
+    return res.status(405).json({
+      ok: false,
+      error: "Method not allowed"
+    });
+  }
 
   try {
-    const {
-      token,
-      timezone = "Australia/Melbourne",
-      reminderTime = "08:00",
-      active = true
-    } = req.body || {};
+    const { token, timezone, reminderTime, active } = req.body || {};
 
+    // Validate the Firebase notification token.
     if (
       typeof token !== "string" ||
-      token.length < 30 ||
-      token.length > 4096
-    ) {
-      return res.status(400).json({ error: "Invalid token" });
-    }
-
-    if (!validTimeZone(timezone)) {
-      return res.status(400).json({ error: "Invalid timezone" });
-    }
-
-    if (
-      !/^([01]\d|2[0-3]):[0-5]\d$/.test(reminderTime) ||
-      Number(reminderTime.slice(3)) % 15 !== 0
+      token.trim().length < 20
     ) {
       return res.status(400).json({
-        error: "Choose a time in 15-minute increments"
+        ok: false,
+        error: "Invalid notification token"
       });
     }
 
-    const a = fb();
-    const db = a.firestore();
+    // Validate the reminder time.
+    if (
+      typeof reminderTime !== "string" ||
+      !/^([01]\d|2[0-3]):([0-5]\d)$/.test(reminderTime)
+    ) {
+      return res.status(400).json({
+        ok: false,
+        error: "Invalid reminder time"
+      });
+    }
 
-    const q = await db.collection("pushTokens")
-      .where("token", "==", token)
+    // The scheduler checks reminders every 15 minutes.
+    const minute = Number(reminderTime.split(":")[1]);
+
+    if (minute % 15 !== 0) {
+      return res.status(400).json({
+        ok: false,
+        error: "Reminder time must use 15-minute intervals"
+      });
+    }
+
+    // Validate the timezone.
+    const selectedTimezone =
+      typeof timezone === "string" && timezone.trim()
+        ? timezone.trim()
+        : "Australia/Melbourne";
+
+    try {
+      new Intl.DateTimeFormat("en-AU", {
+        timeZone: selectedTimezone
+      });
+    } catch {
+      return res.status(400).json({
+        ok: false,
+        error: "Invalid timezone"
+      });
+    }
+
+    const isActive = active !== false;
+
+    const firebase = getFirebase();
+    const db = firebase.firestore();
+
+    const collection = db.collection("pushTokens");
+
+    // Find existing records for this device token.
+    const existing = await collection
+      .where("token", "==", token.trim())
       .get();
 
-    const data = {
-      active: active === true,
-      timezone,
+    const now = firebase.firestore.FieldValue.serverTimestamp();
+
+    const subscriptionData = {
+      token: token.trim(),
+      active: isActive,
       reminderTime,
-      updatedAt: a.firestore.FieldValue.serverTimestamp()
+      timezone: selectedTimezone,
+
+      // Identify this as the official Android app.
+      platform: "android-app",
+      packageName: "com.dailyfaith.app",
+
+      updatedAt: now
     };
 
-    if (q.empty) {
-      if (active === true) {
-        await db.collection("pushTokens").add({
-          ...data,
-          token,
-          createdAt: a.firestore.FieldValue.serverTimestamp()
-        });
-      }
+    if (existing.empty) {
+      // Create a new subscription.
+      await collection.add({
+        ...subscriptionData,
+        createdAt: now
+      });
     } else {
-      const docs = [...q.docs];
+      // Keep the most recently updated record.
+      const documents = existing.docs.slice();
 
-      // Keep the most recently updated record as the main record.
-      docs.sort((a, b) => {
+      documents.sort((a, b) => {
         const aTime = a.data().updatedAt?.toMillis?.() || 0;
         const bTime = b.data().updatedAt?.toMillis?.() || 0;
+
         return bTime - aTime;
       });
 
-      const mainDoc = docs[0];
-      const oldData = mainDoc.data();
+      const mainDocument = documents[0];
 
-      const reminderChanged =
-        oldData.reminderTime !== reminderTime ||
-        oldData.timezone !== timezone;
+      // Update the main record.
+      const previousData = mainDocument.data();
 
-      const updateData = { ...data };
+      const updateData = {
+        ...subscriptionData
+      };
 
       // Allow a newly selected reminder time to send today.
-      if (reminderChanged) {
+      if (
+        previousData.reminderTime !== reminderTime ||
+        previousData.timezone !== selectedTimezone
+      ) {
         updateData.lastSentDate =
-          a.firestore.FieldValue.delete();
+          firebase.firestore.FieldValue.delete();
+
         updateData.lastSentAt =
-          a.firestore.FieldValue.delete();
+          firebase.firestore.FieldValue.delete();
       }
 
-      await mainDoc.ref.update(updateData);
+      await mainDocument.ref.update(updateData);
 
-      // Deactivate duplicate records for this same device token.
-      for (const duplicate of docs.slice(1)) {
-        await duplicate.ref.update({
+      // Deactivate duplicate records for this same token.
+      const duplicateUpdates = documents.slice(1).map(doc =>
+        doc.ref.update({
           active: false,
-          updatedAt: a.firestore.FieldValue.serverTimestamp()
-        });
-      }
+          updatedAt: now
+        })
+      );
+
+      await Promise.all(duplicateUpdates);
     }
 
     return res.status(200).json({
       ok: true,
+      saved: true,
+      platform: "android-app",
+      packageName: "com.dailyfaith.app",
+      active: isActive,
       reminderTime,
-      timezone,
-      active: active === true
+      timezone: selectedTimezone
     });
 
-  } catch (e) {
-    console.error(e);
+  } catch (error) {
+    console.error("Subscription error:", error);
+
     return res.status(500).json({
-      error: "Could not save reminder settings"
+      ok: false,
+      error: "Could not save notification subscription"
     });
   }
 };
