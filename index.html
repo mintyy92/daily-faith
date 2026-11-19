@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -19,7 +20,10 @@
     <nav aria-label="Main navigation">
       <a href="#today">Today</a><a href="#library">Bible library</a><a href="#prayer">Prayer</a>
     </nav>
-    <div class="header-actions"><button class="install-button" id="installApp" hidden>Install app</button><button class="notify-button" id="enableNotifications">Enable reminders</button></div>
+    <div class="header-actions">
+      <button class="install-button" id="installApp" hidden>Install app</button>
+      <button class="notify-button" id="enableNotifications">Enable reminders</button>
+    </div>
     <button class="menu-toggle" id="menuToggle" aria-label="Open navigation">☰</button>
   </header>
 
@@ -38,9 +42,13 @@
 
     <section class="daily-section section-wrap" id="daily-word">
       <div class="section-heading">
-        <div><p class="eyebrow left">YOUR DAILY MOMENT</p><h2>A word for today.</h2></div>
+        <div>
+          <p class="eyebrow left">YOUR DAILY MOMENT</p>
+          <h2>A word for today.</h2>
+        </div>
         <span class="edition-pill">WORLD ENGLISH BIBLE</span>
       </div>
+
       <article class="verse-card">
         <div class="card-topline"><span>✦ &nbsp; VERSE OF THE DAY</span><span id="dayCount"></span></div>
         <div class="verse-content">
@@ -57,26 +65,44 @@
 
       <div class="reflection-grid">
         <article class="info-card reflection-card">
-          <div class="icon-circle">✧</div><p class="eyebrow left">TODAY'S REFLECTION</p>
+          <div class="icon-circle">✧</div>
+          <p class="eyebrow left">TODAY'S REFLECTION</p>
           <h3 id="reflectionTitle">A steady heart</h3>
           <p id="reflectionText"></p>
           <div class="card-foot">TAKE THIS INTO YOUR DAY</div>
         </article>
+
         <article class="info-card prayer-card" id="prayer">
-          <div class="prayer-top"><div class="icon-circle gold">♡</div><p class="eyebrow left">TODAY'S PRAYER</p></div>
+          <div class="prayer-top">
+            <div class="icon-circle gold">♡</div>
+            <p class="eyebrow left">TODAY'S PRAYER</p>
+          </div>
           <h3>A moment of prayer</h3>
           <p id="prayerText"></p>
           <button class="text-button prayer-copy" id="copyPrayer">Copy prayer &nbsp; ↗</button>
           <div class="card-foot">PAUSE · BREATHE · PRAY</div>
         </article>
       </div>
+
       <section class="reminder-panel" id="reminderSettings" aria-labelledby="reminderHeading">
-        <div class="reminder-copy"><p class="eyebrow left">MAKE IT YOURS</p><h3 id="reminderHeading">Your daily reminder.</h3><p>Choose when you would like a little scripture and encouragement to arrive. Times use your device's local timezone.</p></div>
+        <div class="reminder-copy">
+          <p class="eyebrow left">MAKE IT YOURS</p>
+          <h3 id="reminderHeading">Your daily reminder.</h3>
+          <p>Choose the time that works best for you. Your reminder will arrive every day at your selected time, using your device's local timezone.</p>
+        </div>
+
         <div class="reminder-controls">
-          <label class="reminder-time-label" for="reminderTime">Notification time</label>
+          <label class="reminder-time-label" for="reminderTime">Choose your daily reminder time</label>
+
           <input id="reminderTime" type="time" value="08:00" step="900">
-          <label class="reminder-toggle"><input id="reminderEnabled" type="checkbox" checked><span>Daily reminder enabled</span></label>
+
+          <label class="reminder-toggle">
+            <input id="reminderEnabled" type="checkbox" checked>
+            <span>Daily reminder enabled</span>
+          </label>
+
           <button class="button button-light" id="saveReminder">Save reminder settings</button>
+
           <p class="reminder-status" id="reminderStatus" role="status">Choose a time in 15-minute increments.</p>
         </div>
       </section>
@@ -85,9 +111,14 @@
     <section class="library-section" id="library">
       <div class="section-wrap">
         <div class="section-heading library-heading">
-          <div><p class="eyebrow left">SCRIPTURE FOR EVERY SEASON</p><h2>Explore the Bible.</h2><p class="section-description">Find encouragement for whatever life brings.</p></div>
+          <div>
+            <p class="eyebrow left">SCRIPTURE FOR EVERY SEASON</p>
+            <h2>Explore the Bible.</h2>
+            <p class="section-description">Find encouragement for whatever life brings.</p>
+          </div>
           <span class="library-symbol">✝</span>
         </div>
+
         <div class="filter-row" id="filters">
           <button class="filter active" data-filter="All">All verses</button>
           <button class="filter" data-filter="Faith">Faith</button>
@@ -96,6 +127,7 @@
           <button class="filter" data-filter="Love">Love</button>
           <button class="filter" data-filter="Peace">Peace</button>
         </div>
+
         <div class="library-grid" id="libraryGrid"></div>
         <p class="library-note">A growing selection of scripture references. The daily verse changes automatically each calendar day.</p>
       </div>
@@ -108,8 +140,15 @@
     </section>
   </main>
 
-  <footer><a class="brand footer-brand" href="#"><span class="brand-mark">✝</span><span>DAILY FAITH</span></a><p>Rooted in scripture. Growing in grace.</p><span class="copyright">© <span id="year"></span> DAILY FAITH</span></footer>
+  <footer>
+    <a class="brand footer-brand" href="#"><span class="brand-mark">✝</span><span>DAILY FAITH</span></a>
+    <p>Rooted in scripture. Growing in grace.</p>
+    <span class="copyright">© <span id="year"></span> DAILY FAITH</span>
+  </footer>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js"></script><script type="module" src="/pwa.js"></script>
+
+  <script src="app.js"></script>
+  <script type="module" src="/pwa.js"></script>
 </body>
 </html>
