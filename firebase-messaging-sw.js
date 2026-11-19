@@ -16,39 +16,24 @@ firebase.initializeApp(firebaseConfig);
 
 const messaging = firebase.messaging();
 
-// TEMPORARY DIAGNOSTIC NOTIFICATION
-messaging.onBackgroundMessage((payload) => {
+messaging.onBackgroundMessage(payload => {
+  const title =
+    payload.notification?.title ||
+    "Your daily moment with God";
 
-  console.log("DAILY FAITH FCM PAYLOAD:", payload);
-
-  const receivedData = payload.data || {};
-
-  const title = "Daily Faith — Diagnostic";
-
-  const body = JSON.stringify({
-    titleReceived: receivedData.title || "MISSING",
-    bodyReceived: receivedData.body || "MISSING",
-    urlReceived: receivedData.url || "MISSING",
-    notificationPayload: payload.notification || null
-  }, null, 2);
-
-  console.log("DAILY FAITH RECEIVED DATA:", receivedData);
-
-  return self.registration.showNotification(title, {
-    body: body,
+  self.registration.showNotification(title, {
+    body:
+      payload.notification?.body ||
+      "Your Bible verse is ready.",
     icon: "/icons/icon-192.png",
     badge: "/icons/icon-192.png",
-    tag: "daily-faith-diagnostic",
-    renotify: true,
     data: {
-      url: receivedData.url || "/"
+      url: payload.data?.url || "/"
     }
   });
 });
 
-// OPEN DAILY FAITH WHEN NOTIFICATION IS TAPPED
-self.addEventListener("notificationclick", (event) => {
-
+self.addEventListener("notificationclick", event => {
   event.notification.close();
 
   const url = event.notification.data?.url || "/";
@@ -57,9 +42,8 @@ self.addEventListener("notificationclick", (event) => {
     clients.matchAll({
       type: "window",
       includeUncontrolled: true
-    }).then((windowClients) => {
-
-      for (const client of windowClients) {
+    }).then(list => {
+      for (const client of list) {
         if ("focus" in client) {
           client.navigate(url);
           return client.focus();
