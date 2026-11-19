@@ -35,6 +35,14 @@ const timezone =
   Intl.DateTimeFormat().resolvedOptions().timeZone ||
   "Australia/Melbourne";
 
+// A Trusted Web Activity launched by the installed Android app supplies
+// its Android package as the document referrer.
+const isDailyFaithAndroidApp =
+  document.referrer.startsWith("android-app://com.dailyfaith.app");
+const notificationPlatform = isDailyFaithAndroidApp
+  ? "android-app"
+  : "browser";
+
 function message(text, type = "") {
   if (status) {
     status.textContent = text;
@@ -121,6 +129,12 @@ if ("serviceWorker" in navigator) {
 }
 
 async function getPushToken() {
+  if (!isDailyFaithAndroidApp) {
+    throw Error(
+      "Daily reminders are available in the installed Daily Faith app. Please open the app from your home screen."
+    );
+  }
+
   if (
     !window.isSecureContext ||
     !("Notification" in window)
@@ -183,6 +197,7 @@ async function saveSettings() {
     },
     body: JSON.stringify({
       token: pushToken,
+      platform: notificationPlatform,
       timezone,
       reminderTime: timeInput.value,
       active: enabledInput.checked

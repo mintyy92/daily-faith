@@ -6,17 +6,21 @@ module.exports=async(req,res)=>{
  const secret=process.env.CRON_SECRET;if(!secret||req.headers.authorization!==`Bearer ${secret}`)return res.status(401).end("Unauthorized");
  try{
   const a=fb(),db=a.firestore(),now=new Date(),snap=await db.collection("pushTokens").where("active","==",true).get();
+  // Migration-safe: until an app-specific token registers, preserve legacy delivery.
+  // Once one exists, only installed Daily Faith app registrations receive reminders.
+  const appDocs=snap.docs.filter(doc=>doc.data().platform==="android-app");
+  const targetDocs=appDocs.length ? appDocs : snap.docs;
   const groups=new Map();let due=0,invalid=0;
-  for(const doc of snap.docs){const d=doc.data(),timezone=d.timezone||"Australia/Melbourne",reminderTime=d.reminderTime||"08:00";let p;try{p=localParts(now,timezone);}catch{await doc.ref.update({active:false,invalidTimezone:true});invalid++;continue;}
+  for(const doc of targetDocs){const d=doc.data(),timezone=d.timezone||"Australia/Melbourne",reminderTime=d.reminderTime||"08:00";let p;try{p=localParts(now,timezone);}catch{await doc.ref.update({active:false,invalidTimezone:true});invalid++;continue;}
    const localDate=`${p.year}-${p.month}-${p.day}`,localTime=`${p.hour}:${p.minute}`;
    if(localTime<reminderTime||d.lastSentDate===localDate)continue;
    const day=Math.floor(Date.UTC(+p.year,+p.month-1,+p.day)/86400000),verse=verses[((day%7)+7)%7],key=verse[0]+"|"+verse[1];
    if(!groups.has(key))groups.set(key,[]);groups.get(key).push({doc,token:d.token,localDate,verse});due++;
   }
   let sent=0,failed=0;
-  for(const items of groups.values())for(let i=0;i<items.length;i+=500){const batch=items.slice(i,i+500),verse=batch[0].verse,result=await a.messaging().sendEachForMulticast({tokens:batch.map(x=>x.token),notification:{title:verse[0],body:verse[1]},data:{url:"/"},webpush:{fcmOptions:{link:"/"}}});
+  for(const items of groups.values())for(let i=0;i<items.length;i+=500){const batch=items.slice(i,i+500),verse=batch[0].verse,result=await a.messaging().sendEachForMulticast({tokens:batch.map(x=>x.token),data:{title:verse[0],body:verse[1],url:"/"},webpush:{headers:{Urgency:"high"},fcmOptions:{link:"/"}}});
    const writes=[];batch.forEach((item,j)=>{const response=result.responses[j],code=response.error?.code;if(response.success){sent++;writes.push(item.doc.ref.update({lastSentDate:item.localDate,lastSentAt:a.firestore.FieldValue.serverTimestamp()}));}else{failed++;if(code==="messaging/registration-token-not-registered"||code==="messaging/invalid-registration-token")writes.push(item.doc.ref.update({active:false}));}});await Promise.all(writes);
   }
-  return res.status(200).json({ok:true,checked:snap.size,due,sent,failed,invalid,checkedAt:now.toISOString()});
+  return res.status(200).json({ok:true,checked:targetDocs.length,appRegistrations:appDocs.length,legacyFallback:appDocs.length===0,due,sent,failed,invalid,checkedAt:now.toISOString()});
  }catch(e){console.error(e);return res.status(500).json({error:"Send failed"});}
 };
