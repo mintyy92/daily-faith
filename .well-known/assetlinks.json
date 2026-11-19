@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.dailyfaith.app",
+      "sha256_cert_fingerprints": [
+        "85:4D:B1:B5:FE:AE:FF:C6:15:D3:84:BE:2C:F7:65:DF:53:50:97:30:ED:E2:D7:6B:99:3F:44:7C:7D:5A:B3:D6"
+      ]
+    }
+  }
+]
