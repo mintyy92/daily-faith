@@ -1,19 +1,276 @@
-import{initializeApp}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import{getMessaging,getToken,isSupported}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
-const firebaseConfig={apiKey:"AIzaSyAvp_n3uPN4gK9BQU39OEXuARUCQBPQG4",authDomain:"daily-faith-27eb2.firebaseapp.com",projectId:"daily-faith-27eb2",storageBucket:"daily-faith-27eb2.firebasestorage.app",messagingSenderId:"147411163183",appId:"1:147411163183:web:38162d27a19e2f5115ceda",measurementId:"G-30HTLM4DGG"};
-const vapidKey="BE3dynxB_Gx1EMgbVaRNeicHt_3NEktC73IEg52-pw8RzXxul2pMccsYZIZVWotnXwL5YoOEh5E2WXsN7yJdBBg";
-const btn=document.getElementById("enableNotifications"),install=document.getElementById("installApp"),count=document.getElementById("verseCount"),wrap=document.getElementById("scheduleTimes"),enabled=document.getElementById("reminderEnabled"),save=document.getElementById("saveReminder"),status=document.getElementById("reminderStatus");
-const timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||"Australia/Melbourne";let deferred=null,app=null,messaging=null,token=null;
-function say(t,c=""){status.textContent=t;status.className="reminder-status "+c;}function valid(t){return/^([01]\\d|2[0-3]):[0-5]\\d$/.test(t)&&Number(t.slice(3))%15===0;}
-function validate(ts){if(ts.length<1||ts.length>12||ts.some(t=>!valid(t)))throw Error("Choose 1–12 times in 15-minute increments.");const a=[...ts].sort();for(let i=1;i<a.length;i++){const m=t=>+t.slice(0,2)*60+ +t.slice(3);if(m(a[i])-m(a[i-1])<120)throw Error("Please leave at least two hours between each verse time.");}return a;}
-function render(ts){wrap.innerHTML="";ts.forEach((t,i)=>{const row=document.createElement("div");row.className="schedule-time-row";const l=document.createElement("label");l.textContent="Verse "+(i+1);l.htmlFor="verseTime"+i;const input=document.createElement("input");input.type="time";input.step="900";input.id="verseTime"+i;input.value=t;row.append(l,input);wrap.append(row);});}
-function getTimes(){return[...wrap.querySelectorAll("input")].map(x=>x.value);}
-function load(){let s=null;try{s=JSON.parse(localStorage.getItem("dailyFaithReminder")||"null");}catch{}const ts=s?.times?.length?s.times:(s?.time?[s.time]:["08:00","18:00"]);count.value=ts.length;render(ts);if(s)enabled.checked=s.enabled===true;btn.textContent=enabled.checked?"✓ Reminder enabled":"Enable reminders";}
-load();count.addEventListener("change",()=>{const old=getTimes(),defaults=["08:00","10:30","13:00","15:30","18:00","20:30","07:00","09:30","12:00","14:30","17:00","19:30"];render(Array.from({length:+count.value},(_,i)=>old[i]||defaults[i]));});
-enabled.addEventListener("change",()=>btn.textContent=enabled.checked?"✓ Reminder enabled":"Enable reminders");
-window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferred=e;install.hidden=false;});install.addEventListener("click",async()=>{if(deferred){deferred.prompt();await deferred.userChoice;deferred=null;install.hidden=true;}});
-if(matchMedia("(display-mode:standalone)").matches||navigator.standalone)install.hidden=true;
-if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("/firebase-messaging-sw.js").catch(console.error));
-async function pushToken(){if(!isSecureContext||!("Notification"in window))throw Error("Notifications require HTTPS and a supported browser.");if(!(await isSupported()))throw Error("Push notifications are not supported in this browser.");if(Notification.permission!=="granted"&&await Notification.requestPermission()!=="granted")throw Error("Please allow notifications first.");if(!app){app=initializeApp(firebaseConfig);messaging=getMessaging(app);}const reg=await navigator.serviceWorker.ready;token=token||await getToken(messaging,{vapidKey,serviceWorkerRegistration:reg});if(!token)throw Error("Could not obtain your notification token.");return token;}
-async function saveSettings(){const times=validate(getTimes()),push=await pushToken(),active=enabled.checked;const r=await fetch("/api/subscribe",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:push,timezone,reminderTimes:times,active})});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"Could not save schedule.");localStorage.setItem("dailyFaithReminder",JSON.stringify({times,enabled:active}));btn.textContent=active?"✓ Reminder enabled":"Enable reminders";say(active?`${times.length} daily verse reminders saved.`:"Daily verse reminders turned off.","success");dispatchEvent(new Event("dailyfaithschedulechange"));}
-save.addEventListener("click",async()=>{save.disabled=true;try{await saveSettings();}catch(e){say(e.message,"error");}finally{save.disabled=false;}});btn.addEventListener("click",async()=>{document.getElementById("reminderSettings").scrollIntoView({behavior:"smooth",block:"center"});enabled.checked=true;btn.disabled=true;try{await saveSettings();}catch(e){say(e.message,"error");}finally{btn.disabled=false;}});
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getMessaging, getToken, isSupported } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAvp_n3uPN4gK9BQU39OEXuARUCQBPQG4",
+  authDomain: "daily-faith-27eb2.firebaseapp.com",
+  projectId: "daily-faith-27eb2",
+  storageBucket: "daily-faith-27eb2.firebasestorage.app",
+  messagingSenderId: "147411163183",
+  appId: "1:147411163183:web:38162d27a19e2f5115ceda",
+  measurementId: "G-30HTLM4DGG"
+};
+
+const vapidKey = "BE3dynxB_Gx1EMgbVaRNeicHt_3NEktC73IEg52-pw8RzXxul2pMccsYZIZVWotnXwL5YoOEh5E2WXsN7yJdBBg";
+
+const btn = document.getElementById("enableNotifications");
+const install = document.getElementById("installApp");
+const count = document.getElementById("verseCount");
+const wrap = document.getElementById("scheduleTimes");
+const enabled = document.getElementById("reminderEnabled");
+const save = document.getElementById("saveReminder");
+const status = document.getElementById("reminderStatus");
+
+const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Australia/Melbourne";
+
+let deferred = null;
+let app = null;
+let messaging = null;
+let token = null;
+
+function say(t, c = "") {
+  status.textContent = t;
+  status.className = "reminder-status " + c;
+}
+
+// Corrected time validation
+function valid(t) {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(t) &&
+    Number(t.slice(3)) % 15 === 0;
+}
+
+function validate(ts) {
+  if (ts.length < 1 || ts.length > 12 || ts.some(t => !valid(t))) {
+    throw Error("Choose 1–12 times in 15-minute increments.");
+  }
+
+  const a = [...ts].sort();
+
+  for (let i = 1; i < a.length; i++) {
+    const m = t => Number(t.slice(0, 2)) * 60 + Number(t.slice(3));
+
+    if (m(a[i]) - m(a[i - 1]) < 120) {
+      throw Error("Please leave at least two hours between each verse time.");
+    }
+  }
+
+  return a;
+}
+
+function render(ts) {
+  wrap.innerHTML = "";
+
+  ts.forEach((t, i) => {
+    const row = document.createElement("div");
+    row.className = "schedule-time-row";
+
+    const l = document.createElement("label");
+    l.textContent = "Verse " + (i + 1);
+    l.htmlFor = "verseTime" + i;
+
+    const input = document.createElement("input");
+    input.type = "time";
+    input.step = "900";
+    input.id = "verseTime" + i;
+    input.value = t;
+
+    row.append(l, input);
+    wrap.append(row);
+  });
+}
+
+function getTimes() {
+  return [...wrap.querySelectorAll("input")].map(x => x.value);
+}
+
+function load() {
+  let s = null;
+
+  try {
+    s = JSON.parse(localStorage.getItem("dailyFaithReminder") || "null");
+  } catch {}
+
+  const ts = s?.times?.length
+    ? s.times
+    : (s?.time ? [s.time] : ["08:00", "18:00"]);
+
+  count.value = ts.length;
+  render(ts);
+
+  if (s) {
+    enabled.checked = s.enabled === true;
+  }
+
+  btn.textContent = enabled.checked
+    ? "✓ Reminder enabled"
+    : "Enable reminders";
+}
+
+load();
+
+count.addEventListener("change", () => {
+  const old = getTimes();
+
+  const defaults = [
+    "08:00", "10:30", "13:00", "15:30",
+    "18:00", "20:30", "07:00", "09:30",
+    "12:00", "14:30", "17:00", "19:30"
+  ];
+
+  render(
+    Array.from(
+      { length: +count.value },
+      (_, i) => old[i] || defaults[i]
+    )
+  );
+});
+
+enabled.addEventListener("change", () => {
+  btn.textContent = enabled.checked
+    ? "✓ Reminder enabled"
+    : "Enable reminders";
+});
+
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  deferred = e;
+  install.hidden = false;
+});
+
+install.addEventListener("click", async () => {
+  if (deferred) {
+    deferred.prompt();
+    await deferred.userChoice;
+    deferred = null;
+    install.hidden = true;
+  }
+});
+
+if (
+  matchMedia("(display-mode:standalone)").matches ||
+  navigator.standalone
+) {
+  install.hidden = true;
+}
+
+if ("serviceWorker" in navigator) {
+  addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/firebase-messaging-sw.js")
+      .catch(console.error);
+  });
+}
+
+async function pushToken() {
+  if (!isSecureContext || !("Notification" in window)) {
+    throw Error("Notifications require HTTPS and a supported browser.");
+  }
+
+  if (!(await isSupported())) {
+    throw Error("Push notifications are not supported in this browser.");
+  }
+
+  if (
+    Notification.permission !== "granted" &&
+    await Notification.requestPermission() !== "granted"
+  ) {
+    throw Error("Please allow notifications first.");
+  }
+
+  if (!app) {
+    app = initializeApp(firebaseConfig);
+    messaging = getMessaging(app);
+  }
+
+  const reg = await navigator.serviceWorker.ready;
+
+  token = token || await getToken(messaging, {
+    vapidKey,
+    serviceWorkerRegistration: reg
+  });
+
+  if (!token) {
+    throw Error("Could not obtain your notification token.");
+  }
+
+  return token;
+}
+
+async function saveSettings() {
+  const times = validate(getTimes());
+  const push = await pushToken();
+  const active = enabled.checked;
+
+  const r = await fetch("/api/subscribe", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      token: push,
+      timezone,
+      reminderTimes: times,
+      active
+    })
+  });
+
+  const d = await r.json().catch(() => ({}));
+
+  if (!r.ok) {
+    throw Error(d.error || "Could not save schedule.");
+  }
+
+  localStorage.setItem(
+    "dailyFaithReminder",
+    JSON.stringify({
+      times,
+      enabled: active
+    })
+  );
+
+  btn.textContent = active
+    ? "✓ Reminder enabled"
+    : "Enable reminders";
+
+  say(
+    active
+      ? `${times.length} daily verse reminders saved.`
+      : "Daily verse reminders turned off.",
+    "success"
+  );
+
+  dispatchEvent(new Event("dailyfaithschedulechange"));
+}
+
+save.addEventListener("click", async () => {
+  save.disabled = true;
+
+  try {
+    await saveSettings();
+  } catch (e) {
+    say(e.message, "error");
+  } finally {
+    save.disabled = false;
+  }
+});
+
+btn.addEventListener("click", async () => {
+  document
+    .getElementById("reminderSettings")
+    .scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+
+  enabled.checked = true;
+  btn.disabled = true;
+
+  try {
+    await saveSettings();
+  } catch (e) {
+    say(e.message, "error");
+  } finally {
+    btn.disabled = false;
+  }
+});
