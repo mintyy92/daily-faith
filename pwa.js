@@ -3,7 +3,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getMessaging, getToken, isSupported } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAvp_n3uPN4gkG9BQU39OEXuARUCQBPQG4",
+  apiKey: "AIzaSyAvp_n3uPN4gGk9BQU39OEXuARUCQBPQG4",
   authDomain: "daily-faith-27eb2.firebaseapp.com",
   projectId: "daily-faith-27eb2",
   storageBucket: "daily-faith-27eb2.firebasestorage.app",
